@@ -1,8 +1,13 @@
+[phases.install]
+cmds = [
+  "composer install --no-dev --optimize-autoloader --no-security-blocking --no-scripts"
+]
+
 [phases.build]
 cmds = [
-  "composer install --no-dev --optimize-autoloader",
   "npm install",
-  "npm run build"
+  "npm run build",
+  "composer run-script post-autoload-dump"
 ]
 
 [start]
