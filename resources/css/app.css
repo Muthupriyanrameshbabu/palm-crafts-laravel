@@ -1,0 +1,53 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Work+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-palm-cream text-ink font-body antialiased;
+  }
+  h1, h2, h3, .font-display {
+    @apply font-display;
+  }
+  /* Visible keyboard focus everywhere — accessibility floor, not optional. */
+  a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible {
+    @apply outline-2 outline-offset-2 outline-brass;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  /* Signature background: a diagonal-rib weave pattern echoing the basket-weave
+     structure described in the craft process. Used sparingly on section dividers. */
+  .weave-texture {
+    background-image: repeating-linear-gradient(
+      45deg,
+      theme('colors.brass / 8%'),
+      theme('colors.brass / 8%') 2px,
+      transparent 2px,
+      transparent 14px
+    );
+  }
+
+  .eyebrow {
+    @apply font-mono text-xs uppercase tracking-[0.2em] text-brass;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center gap-2 bg-ink text-palm-cream px-6 py-3 font-body text-sm tracking-wide
+           hover:bg-kolam-red transition-colors duration-300;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center gap-2 border border-ink/30 text-ink px-6 py-3 font-body text-sm tracking-wide
+           hover:border-ink transition-colors duration-300;
+  }
+}
