@@ -13,14 +13,14 @@ Route::get('/collections', [ProductController::class, 'index'])->name('products.
 Route::get('/collections/{category:slug}', [ProductController::class, 'index'])->name('products.byCategory');
 Route::get('/products/{product:slug}', [ProductController::class, 'show'])->name('products.show');
 
-Route::prefix('cart')->name('cart.')->group(function () {
+Route::prefix('cart')->name('cart.')->middleware('throttle:60,1')->group(function () {
     Route::get('/', [CartController::class, 'show'])->name('show');
     Route::post('/', [CartController::class, 'store'])->name('store');
     Route::patch('/{cartItem}', [CartController::class, 'update'])->name('update');
     Route::delete('/{cartItem}', [CartController::class, 'destroy'])->name('destroy');
 });
 
-Route::prefix('checkout')->name('checkout.')->group(function () {
+Route::prefix('checkout')->name('checkout.')->middleware('throttle:20,1')->group(function () {
     Route::get('/', [CheckoutController::class, 'show'])->name('show');
     Route::post('/', [CheckoutController::class, 'initiate'])->name('initiate');
     Route::get('/{order}/pay', [CheckoutController::class, 'pay'])->name('pay');
@@ -28,7 +28,10 @@ Route::prefix('checkout')->name('checkout.')->group(function () {
     Route::get('/{order}/success', [CheckoutController::class, 'success'])->name('success');
 });
 
-// Server-to-server webhook — no CSRF, no session/auth middleware. Signature-verified inside the controller.
-Route::post('/webhooks/razorpay', [RazorpayWebhookController::class, 'handle'])->name('webhooks.razorpay');
+// Webhook has its own generous limit — Razorpay may legitimately retry rapidly, but this
+// still caps runaway/malicious traffic. Signature verification is the real gatekeeper.
+Route::post('/webhooks/razorpay', [RazorpayWebhookController::class, 'handle'])
+    ->middleware('throttle:120,1')
+    ->name('webhooks.razorpay');
 
 require __DIR__.'/auth.php';

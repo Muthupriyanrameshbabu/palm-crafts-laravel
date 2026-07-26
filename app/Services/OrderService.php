@@ -82,11 +82,11 @@ class OrderService
      */
     public function confirmPayment(Order $order, string $razorpayPaymentId, string $razorpaySignature): void
     {
-        DB::transaction(function () use ($order, $razorpayPaymentId, $razorpaySignature) {
+        $alreadyPaid = DB::transaction(function () use ($order, $razorpayPaymentId, $razorpaySignature) {
             $order = Order::where('id', $order->id)->lockForUpdate()->first();
 
             if ($order->status === 'paid') {
-                return; // Already processed — webhook and redirect can both fire for the same payment.
+                return true; // Already processed — webhook and redirect can both fire for the same payment.
             }
 
             foreach ($order->items as $item) {
@@ -104,7 +104,16 @@ class OrderService
             if ($order->user_id) {
                 Cart::where('user_id', $order->user_id)->first()?->items()->delete();
             }
+
+            return false;
         });
+
+        // Deliberately outside the transaction: mail dispatch shouldn't hold the
+        // row lock, and we only want to notify once even if both the redirect
+        // callback and the webhook race to call this method.
+        if (! $alreadyPaid) {
+            \Illuminate\Support\Facades\Mail::to($order->email)->queue(new \App\Mail\OrderConfirmationMail($order->fresh()));
+        }
     }
 
     private function calculateShipping(int $subtotalInPaise): int

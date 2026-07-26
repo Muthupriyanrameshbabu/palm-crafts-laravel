@@ -88,7 +88,26 @@ Leave `RAZORPAY_WEBHOOK_SECRET` blank for now — webhooks need a public URL
 work using Razorpay's test card numbers: card `4111 1111 1111 1111`, any
 future expiry, any CVV.
 
-## 7. Run it
+## 7. Create your admin account
+
+Register a normal account at `/register` (once Breeze is installed), then
+grant it admin panel access:
+```bash
+php artisan app:make-admin you@example.com
+```
+Visit **http://127.0.0.1:8000/admin** to manage products, categories, and
+orders.
+
+## 8. Run the tests (optional but recommended)
+
+```bash
+php artisan test
+```
+This checks the stock-locking and payment-confirmation logic specifically —
+worth running before you deploy, since these are the two places a bug would
+cost real money or inventory.
+
+## 9. Run it
 
 Open two terminals:
 

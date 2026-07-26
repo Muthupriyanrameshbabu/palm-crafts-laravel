@@ -93,21 +93,67 @@ composer require laravel/breeze --dev
 php artisan breeze:install blade
 ```
 
-## Still to build (Phase 3+)
+## Phase 3 — admin panel, emails, tests (added)
 
-1. **Filament admin panel** for managing products, orders, inventory
-2. **Order confirmation emails** (Mailable + queued job)
-3. **Seeders** with your real product catalog (Pattamadai Tote, etc.) and
-   product photography uploaded to `storage/app/public`
-4. **Forge deployment**: zero-downtime deploys, queue worker, scheduler,
-   SSL via Let's Encrypt, `.env` secrets management
-5. **Rate limiting** on cart/checkout routes to blunt abuse
-6. **Tests** for the stock-locking and payment-confirmation logic
-   specifically — these are the two places a race condition would cost you
-   real money or inventory
-7. **Mobile cart drawer** (currently a full cart page — fine functionally,
-   but a slide-out drawer would match the "shopping_bag" icon UX implied by
-   the original design)
+**Admin panel** at `/admin` (Filament):
+- Products: full CRUD with inline image upload (drag-to-reorder) and variant
+  management, prices entered in ₹ and converted to paise automatically
+- Categories: simple CRUD
+- Orders: **deliberately read-only on financial fields** — you can update
+  fulfillment status and add internal notes, but line items, amounts, and
+  payment IDs can't be edited, because an order is a record of what actually
+  happened and shouldn't be editable after the fact
+
+No one can register their way into the admin panel — access is gated by an
+`is_admin` flag that nothing in the app UI can set. To grant yourself access
+after registering a normal account:
+```bash
+php artisan app:make-admin you@example.com
+```
+
+**Order confirmation emails** are queued and sent automatically the moment a
+payment is confirmed — dispatched outside the database transaction so a slow
+mail server never holds a stock-decrement row lock.
+
+**Rate limiting**: cart routes capped at 60 req/min, checkout at 20 req/min,
+the webhook at 120 req/min (generous, since Razorpay may legitimately retry —
+the real gatekeeper there is the signature check, not the rate limit).
+
+**Tests** cover the two places a bug here costs real money:
+- `CartServiceTest` — stock limits are enforced correctly across repeated
+  add-to-cart calls, and prices are snapshotted (not live) once added
+- `OrderServiceTest` — calling `confirmPayment()` twice (simulating the
+  webhook and the browser redirect racing each other) deducts stock and
+  sends the confirmation email exactly once, not twice
+
+Run them with:
+```bash
+php artisan test
+```
+
+**Bugs I caught and fixed while building this phase:**
+- The `addresses` table required a `user_id`, which would have crashed
+  every guest checkout (no account) the moment someone tried to order
+  without logging in — fixed to allow `NULL` for guest addresses.
+- `checkout_email` session wasn't being set anywhere (caught in Phase 2),
+  which would have 403'd every guest trying to view their own order
+  confirmation page.
+
+
+
+## Still to build (Phase 4+)
+
+1. **Seed real product photography** — upload actual images via the admin
+   panel's product image manager; the storefront degrades gracefully to a
+   placeholder block until you do
+2. **Forge deployment**: zero-downtime deploys, queue worker (`php artisan
+   queue:work` — needed for order emails to actually send), scheduler, SSL
+   via Let's Encrypt, `.env` secrets management
+3. **Mobile cart drawer** (currently a full cart page — functional, but a
+   slide-out drawer would match the "shopping_bag" icon UX)
+4. **GST/tax handling** if/when you register for GST — `tax_in_paise` is
+   already wired through the order pipeline as a placeholder, currently
+   always 0
 
 ## Security notes (OWASP-aligned)
 
